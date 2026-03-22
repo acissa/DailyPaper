@@ -4,6 +4,7 @@ struct TodoItemRow: View {
     let item: TodoItem
     let isReadOnly: Bool
     let isFocused: Bool
+    let isDragging: Bool
     let onToggle: () -> Void
     let onDelete: () -> Void
     let onTextChange: (String) -> Void
@@ -21,6 +22,7 @@ struct TodoItemRow: View {
         item: TodoItem,
         isReadOnly: Bool,
         isFocused: Bool = false,
+        isDragging: Bool = false,
         onToggle: @escaping () -> Void,
         onDelete: @escaping () -> Void,
         onTextChange: @escaping (String) -> Void,
@@ -32,6 +34,7 @@ struct TodoItemRow: View {
         self.item = item
         self.isReadOnly = isReadOnly
         self.isFocused = isFocused
+        self.isDragging = isDragging
         self.onToggle = onToggle
         self.onDelete = onDelete
         self.onTextChange = onTextChange
@@ -44,6 +47,17 @@ struct TodoItemRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            // Drag handle (visible on hover, not in read-only)
+            if isHovering && !isReadOnly {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary.opacity(0.4))
+                    .frame(width: 12)
+                    .transition(.opacity)
+            } else {
+                Color.clear.frame(width: 12)
+            }
+
             // Indentation
             if item.indent > 0 {
                 Spacer()
@@ -111,6 +125,7 @@ struct TodoItemRow: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .contentShape(Rectangle())
+        .opacity(isDragging ? 0.4 : 1.0)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovering = hovering
