@@ -257,6 +257,16 @@ final class TodoViewModel: ObservableObject {
 
     func checkTodayList() {
         let todayKey = DailyPaperData.dateKey(for: Date())
+
+        // Re-read from disk first — another machine may have already created today's list
+        let diskData = storage.load()
+        if diskData.days[todayKey] != nil {
+            // Another machine already set up today — use it, dismiss any sheet
+            data = diskData
+            showCarryOverSheet = false
+            return
+        }
+
         if data.days[todayKey] == nil {
             // Check for previous incomplete items
             if let (_, prevList) = data.mostRecentDay(before: Date()) {
@@ -276,6 +286,15 @@ final class TodoViewModel: ObservableObject {
 
     func confirmCarryOver() {
         let todayKey = DailyPaperData.dateKey(for: Date())
+
+        // Re-check disk — another machine may have already handled carry-over
+        let diskData = storage.load()
+        if diskData.days[todayKey] != nil {
+            data = diskData
+            showCarryOverSheet = false
+            return
+        }
+
         var newItems: [TodoItem] = []
 
         for item in carryOverItems where carryOverSelections.contains(item.id) {
@@ -296,6 +315,15 @@ final class TodoViewModel: ObservableObject {
 
     func skipCarryOver() {
         let todayKey = DailyPaperData.dateKey(for: Date())
+
+        // Re-check disk — another machine may have already handled it
+        let diskData = storage.load()
+        if diskData.days[todayKey] != nil {
+            data = diskData
+            showCarryOverSheet = false
+            return
+        }
+
         data.days[todayKey] = DailyList()
         storage.save(data)
         showCarryOverSheet = false
@@ -304,6 +332,11 @@ final class TodoViewModel: ObservableObject {
     // MARK: - Reload
 
     func reloadFromDisk() {
+        let todayKey = DailyPaperData.dateKey(for: Date())
         data = storage.load()
+        // If another machine created today's list while we had the carry-over sheet open, dismiss it
+        if showCarryOverSheet && data.days[todayKey] != nil {
+            showCarryOverSheet = false
+        }
     }
 }
