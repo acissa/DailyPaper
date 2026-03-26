@@ -55,6 +55,9 @@ final class TodoViewModel: ObservableObject {
         self.storage = storage
         self.data = storage.load()
 
+        // Strip any persisted empty items (e.g. app quit while an empty row was open)
+        stripEmptyItemsFromAllDays()
+
         storage.onExternalChange = { [weak self] in
             self?.reloadFromDisk()
         }
@@ -64,6 +67,24 @@ final class TodoViewModel: ObservableObject {
 
         // Watch for day changes (midnight rollover + app re-activation after sleep)
         setupDayChangeObservers()
+
+        // Never auto-focus on launch — user must explicitly click Add Item or a row
+        focusedItemID = nil
+    }
+
+    /// Remove empty items that were persisted (e.g. app quit mid-edit)
+    private func stripEmptyItemsFromAllDays() {
+        var changed = false
+        for (key, day) in data.days {
+            let cleaned = day.items.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
+            if cleaned.count != day.items.count {
+                data.days[key]?.items = cleaned
+                changed = true
+            }
+        }
+        if changed {
+            storage.save(data)
+        }
     }
 
     private func setupDayChangeObservers() {
